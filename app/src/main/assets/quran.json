@@ -1,0 +1,20 @@
+{
+  "surahs": [
+    {
+      "number": 1,
+      "name": "الفاتحة",
+      "englishName": "Al-Fatihah",
+      "englishNameTranslation": "The Opening",
+      "revelationType": "Meccan",
+      "ayahs": [
+        {
+          "number": 1,
+          "text": "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
+          "translation": "In the name of Allah, the Entirely Merciful, the Especially Merciful.",
+          "juz": 1,
+          "page": 1
+        }
+      ]
+    }
+  ]
+}
