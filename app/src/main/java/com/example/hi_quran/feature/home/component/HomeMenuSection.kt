@@ -30,7 +30,7 @@ fun HomeMenuSection() {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             HomeMenuItem(name = "Al-Qur'an", icon = Icons.AutoMirrored.Outlined.MenuBook, color = Color(0xFFE7F3EF))
             HomeMenuItem(name = "Hadits", icon = Icons.AutoMirrored.Outlined.LibraryBooks, color = Color(0xFFFFF4E5))
-            HomeMenuItem(name = "Dzikir", icon = Icons.Outlined.AutoAwesome, color = Color(0xFFEBF2FF))
+            HomeMenuItem(name = "Tazkiyah", icon = Icons.Outlined.AutoAwesome, color = Color(0xFFEBF2FF))
             HomeMenuItem(name = "Profil", icon = Icons.Outlined.PersonOutline, color = Color(0xFFF3E8FF))
         }
     }

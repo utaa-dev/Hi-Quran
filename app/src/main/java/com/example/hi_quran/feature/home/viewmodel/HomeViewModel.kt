@@ -28,7 +28,6 @@ class HomeViewModel @Inject constructor(
 
     private fun loadSurahs() {
         getSurahsUseCase()
-            .take(1) // Home only needs initial list
             .onEach { _surahs.value = it }
             .launchIn(viewModelScope)
     }

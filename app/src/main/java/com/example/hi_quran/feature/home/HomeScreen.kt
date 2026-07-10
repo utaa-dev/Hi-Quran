@@ -18,6 +18,8 @@ import com.example.hi_quran.feature.quran.component.SurahCard
 @Composable
 fun HomeScreen(
     onSurahClick: (Int) -> Unit,
+    onJadwalSholatClick: () -> Unit,
+    onKalenderHijriahClick: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val surahs by viewModel.surahs.collectAsState()
@@ -43,7 +45,10 @@ fun HomeScreen(
             }
 
             item {
-                KiblatMasjidCard()
+                HomeQuickActions(
+                    onJadwalSholatClick = onJadwalSholatClick,
+                    onKalenderHijriahClick = onKalenderHijriahClick
+                )
             }
 
             item {

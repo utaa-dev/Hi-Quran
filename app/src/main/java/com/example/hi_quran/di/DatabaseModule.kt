@@ -65,9 +65,10 @@ object DatabaseModule {
         juzDao: JuzDao,
         bookmarkDao: BookmarkDao,
         lastReadDao: LastReadDao,
-        doaDao: DoaDao
+        doaDao: DoaDao,
+        quranApi: com.example.hi_quran.data.remote.api.QuranApi
     ): QuranRepository {
-        return QuranRepositoryImpl(quranDao, juzDao, bookmarkDao, lastReadDao, doaDao)
+        return QuranRepositoryImpl(quranDao, juzDao, bookmarkDao, lastReadDao, doaDao, quranApi)
     }
 
     @Provides

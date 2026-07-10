@@ -10,6 +10,9 @@ interface QuranRepository {
     suspend fun getSurahByNumber(surahNumber: Int): Surah?
     suspend fun importQuranData(surahs: List<Surah>, ayahs: List<Ayah>)
     suspend fun isDataImported(): Boolean
+    suspend fun getSurahCount(): Int
+    suspend fun syncSurahs(): Result<Unit>
+    suspend fun isDatabaseEmpty(): Boolean
 
     // Juz
     fun getAllJuz(): Flow<List<Juz>>

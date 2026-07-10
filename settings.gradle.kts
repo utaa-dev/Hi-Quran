@@ -24,4 +24,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "Hi-Quran"
 include(":app")
+include(":tools:quran-generator")
  

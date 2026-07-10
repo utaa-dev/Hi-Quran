@@ -7,7 +7,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.People
 import androidx.compose.material.icons.outlined.Pin
+import androidx.compose.material.icons.outlined.Public
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -17,7 +19,8 @@ import com.example.hi_quran.feature.doa.component.*
 
 @Composable
 fun DzikirScreen(
-    onTasbihClick: () -> Unit = {}
+    onTasbihClick: () -> Unit = {},
+    onSeeAllDoaClick: () -> Unit = {}
 ) {
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -68,7 +71,32 @@ fun DzikirScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // 4. Koleksi Sholawat Section
+            // 4. Koleksi Doa Section
+            SectionHeader(title = "Koleksi Doa", onActionClick = onSeeAllDoaClick)
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                DoaCard(
+                    modifier = Modifier.weight(1f),
+                    title = "Doa Kedua Orang Tua",
+                    subtitle = "Berbakti & Kasih Sayang",
+                    icon = Icons.Outlined.People,
+                    onClick = onSeeAllDoaClick
+                )
+                DoaCard(
+                    modifier = Modifier.weight(1f),
+                    title = "Doa Sapu Jagad",
+                    subtitle = "Kebaikan Dunia Akhirat",
+                    icon = Icons.Outlined.Public,
+                    onClick = onSeeAllDoaClick
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // 5. Koleksi Sholawat Section
             SectionHeader(title = "Koleksi Sholawat", showAction = false)
             Spacer(modifier = Modifier.height(12.dp))
             Row(

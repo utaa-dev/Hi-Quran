@@ -11,6 +11,8 @@ import com.example.hi_quran.feature.auth.login.LoginScreen
 import com.example.hi_quran.feature.auth.register.RegisterScreen
 import com.example.hi_quran.feature.auth.welcome.WelcomeScreen
 import com.example.hi_quran.feature.doa.TasbihDigitalScreen
+import com.example.hi_quran.feature.home.HijriCalendarScreen
+import com.example.hi_quran.feature.home.PrayerScheduleScreen
 import com.example.hi_quran.feature.splash.SplashScreen
 
 @Composable
@@ -66,11 +68,31 @@ fun AppNavigation() {
             MainNavigation(
                 onNavigateToTasbih = {
                     navController.navigate(RootScreen.TasbihDigital.route)
+                },
+                onNavigateToJadwalSholat = {
+                    navController.navigate(RootScreen.JadwalSholat.route)
+                },
+                onNavigateToKalender = {
+                    navController.navigate(RootScreen.KalenderHijriah.route)
                 }
             )
         }
         composable(RootScreen.TasbihDigital.route) {
             TasbihDigitalScreen(
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
+        }
+        composable(RootScreen.JadwalSholat.route) {
+            PrayerScheduleScreen(
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
+        }
+        composable(RootScreen.KalenderHijriah.route) {
+            HijriCalendarScreen(
                 onBackClick = {
                     navController.popBackStack()
                 }

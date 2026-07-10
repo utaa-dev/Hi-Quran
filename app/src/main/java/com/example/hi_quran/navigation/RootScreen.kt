@@ -10,4 +10,8 @@ sealed class RootScreen(
     data object Main : RootScreen("main")
 
     data object TasbihDigital : RootScreen("tasbih_digital")
+
+    data object JadwalSholat : RootScreen("jadwal_sholat")
+
+    data object KalenderHijriah : RootScreen("kalender_hijriah")
 }

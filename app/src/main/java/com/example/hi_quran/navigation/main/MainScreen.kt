@@ -25,7 +25,7 @@ sealed class MainScreen(
     )
     data object Dzikir: MainScreen(
         route = "dzikir",
-        title = "Dzikir",
+        title = "Tazkiyah",
         icon = Icons.Default.AutoAwesome
     )
     data object Hadith: MainScreen(

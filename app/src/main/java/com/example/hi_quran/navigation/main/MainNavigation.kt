@@ -1,16 +1,17 @@
 package com.example.hi_quran.navigation.main
 
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.hi_quran.feature.doa.DzikirScreen
+import com.example.hi_quran.feature.doa.screen.DoaListScreen
 import com.example.hi_quran.feature.hadith.HadithScreen
 import com.example.hi_quran.feature.home.HomeScreen
 import com.example.hi_quran.feature.profile.ProfileScreen
@@ -20,7 +21,9 @@ import com.example.hi_quran.feature.quran.screen.SurahDetailScreen
 
 @Composable
 fun MainNavigation(
-    onNavigateToTasbih: () -> Unit
+    onNavigateToTasbih: () -> Unit,
+    onNavigateToJadwalSholat: () -> Unit,
+    onNavigateToKalender: () -> Unit
 ) {
     val navController = rememberNavController()
 
@@ -33,25 +36,26 @@ fun MainNavigation(
     )
 
     Scaffold(
-        containerColor = Color.White,
+        containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
             BottomNavigationBar(
                 navController = navController,
                 items = bottomItems
             )
         },
-        // Penting: Scaffold luar ini menangani insets bawah (bottom bar)
     ) { padding ->
         NavHost(
             navController = navController,
             startDestination = MainScreen.Home.route,
-            modifier = Modifier.padding(padding)
+            modifier = Modifier.padding(bottom = padding.calculateBottomPadding())
         ) {
             composable(MainScreen.Home.route) {
                 HomeScreen(
                     onSurahClick = { surahNumber ->
                         navController.navigate("surah_detail/$surahNumber")
-                    }
+                    },
+                    onJadwalSholatClick = onNavigateToJadwalSholat,
+                    onKalenderHijriahClick = onNavigateToKalender
                 )
             }
             composable(MainScreen.Quran.route) {
@@ -92,9 +96,18 @@ fun MainNavigation(
                 // Placeholder
             }
             composable(MainScreen.Dzikir.route) {
-                DzikirScreen {
-                    onNavigateToTasbih()
-                }
+                DzikirScreen(
+                    onTasbihClick = { onNavigateToTasbih() },
+                    onSeeAllDoaClick = { navController.navigate("doa_list") }
+                )
+            }
+            composable("doa_list") {
+                DoaListScreen(
+                    onBackClick = { navController.popBackStack() },
+                    onDoaClick = { doa ->
+                        // Navigate to detail if available
+                    }
+                )
             }
             composable(MainScreen.Hadith.route) {
                 HadithScreen()
