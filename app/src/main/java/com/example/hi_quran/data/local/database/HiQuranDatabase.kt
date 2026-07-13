@@ -14,7 +14,7 @@ import com.example.hi_quran.data.local.entity.*
         BookmarkEntity::class,
         LastReadEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class HiQuranDatabase : RoomDatabase() {

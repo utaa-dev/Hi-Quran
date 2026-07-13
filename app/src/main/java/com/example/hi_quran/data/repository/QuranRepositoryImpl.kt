@@ -2,8 +2,6 @@ package com.example.hi_quran.data.repository
 
 import com.example.hi_quran.data.local.dao.*
 import com.example.hi_quran.data.local.entity.*
-import com.example.hi_quran.data.remote.api.QuranApi
-import com.example.hi_quran.data.remote.mapper.toEntities
 import com.example.hi_quran.domain.model.*
 import com.example.hi_quran.domain.repository.QuranRepository
 import kotlinx.coroutines.flow.Flow
@@ -14,8 +12,7 @@ class QuranRepositoryImpl(
     private val juzDao: JuzDao,
     private val bookmarkDao: BookmarkDao,
     private val lastReadDao: LastReadDao,
-    private val doaDao: DoaDao,
-    private val quranApi: QuranApi,
+    private val doaDao: DoaDao
 ) : QuranRepository {
 
     override fun getAllSurahs(): Flow<List<Surah>> {
@@ -34,29 +31,8 @@ class QuranRepositoryImpl(
         return quranDao.getSurahByNumber(surahNumber)?.toDomain()
     }
 
-    override suspend fun importQuranData(surahs: List<Surah>, ayahs: List<Ayah>) {
-        quranDao.insertSurahs(surahs.map { it.toEntity() })
-        quranDao.insertAyahs(ayahs.map { it.toEntity() })
-    }
-
-    override suspend fun isDataImported(): Boolean {
-        return quranDao.getSurahCount() > 0
-    }
-
     override suspend fun getSurahCount(): Int {
         return quranDao.getSurahCount()
-    }
-
-    override suspend fun syncSurahs(): Result<Unit> {
-        return runCatching {
-            val response = quranApi.getSurahs()
-            if (response.code == 200) {
-                val entities = response.data.toEntities()
-                quranDao.insertSurahs(entities)
-            } else {
-                throw Exception("API Error: ${response.message}")
-            }
-        }
     }
 
     override suspend fun isDatabaseEmpty(): Boolean {
@@ -77,10 +53,6 @@ class QuranRepositoryImpl(
                 juzWithAyahs.ayahs.map { it.toDomain() }
             )
         }
-    }
-
-    override suspend fun importJuzData(juzList: List<Juz>) {
-        juzDao.insertJuzList(juzList.map { it.toEntity() })
     }
 
     // Bookmark
@@ -116,10 +88,6 @@ class QuranRepositoryImpl(
         return doaDao.getAllDoas().map { entities ->
             entities.map { it.toDomain() }
         }
-    }
-
-    override suspend fun importDoaData(doas: List<Doa>) {
-        doaDao.insertDoas(doas.map { it.toEntity() })
     }
 }
 

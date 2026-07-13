@@ -2,13 +2,15 @@ package com.example.hi_quran.generator
 
 import com.example.hi_quran.generator.api.QuranFetcher
 import com.example.hi_quran.generator.constant.AppConstants
+import com.example.hi_quran.generator.data.datasource.local.QuranLocalDataSourceImpl
+import com.example.hi_quran.generator.data.datasource.remote.QuranRemoteDataSourceImpl
+import com.example.hi_quran.generator.data.repository.QuranRepositoryImpl
 import com.example.hi_quran.generator.database.DatabaseManager
+import com.example.hi_quran.generator.domain.usecase.GenerateQuranDatabaseUseCase
 import com.example.hi_quran.generator.report.ReportData
 import com.example.hi_quran.generator.report.ReportGenerator
-import com.example.hi_quran.generator.util.ArabicNormalizer
 import com.example.hi_quran.generator.util.TimeUtil
 import kotlinx.coroutines.runBlocking
-import java.time.OffsetDateTime
 import kotlin.system.exitProcess
 
 fun main(args: Array<String>) {
@@ -38,18 +40,27 @@ fun main(args: Array<String>) {
 }
 
 suspend fun executePipeline(config: GeneratorConfig) {
+    // Infrastructure
     val fetcher = QuranFetcher(config)
     val dbManager = DatabaseManager(config)
     val reporter = ReportGenerator(config)
 
-    // 1. Fetch Surah List
+    // Data Layer
+    val remoteDataSource = QuranRemoteDataSourceImpl(fetcher)
+    val localDataSource = QuranLocalDataSourceImpl(dbManager)
+    val repository = QuranRepositoryImpl(remoteDataSource, localDataSource)
+
+    // Domain Layer
+    val generateUseCase = GenerateQuranDatabaseUseCase(repository)
+
+    // 1. Fetch Surah List (Initial connection check)
     println("[INFO] Connecting to API: ${config.baseUrl}")
-    val remoteSurahs = fetcher.fetchSurahList()
-    println("[SUCCESS] API Connection verified. ${remoteSurahs.size} surahs found.")
+    val initialSurahs = fetcher.fetchSurahList()
+    println("[SUCCESS] API Connection verified. ${initialSurahs.size} surahs found.")
 
     if (config.isDryRun) {
         println("[DRY RUN] Validating first surah data structure...")
-        fetcher.fetchSurahDetail(remoteSurahs.first().nomor)
+        fetcher.fetchSurahDetail(initialSurahs.first().nomor)
         println("[DRY RUN] Data structure is valid. No database created.")
         return
     }
@@ -59,92 +70,56 @@ suspend fun executePipeline(config: GeneratorConfig) {
     dbManager.createSchema()
     dbManager.beginTransaction()
 
-    var totalAyahInserted = 0
     val startTime = System.currentTimeMillis()
 
     try {
-        // 3. Insert Surahs
-        println("[PROCESS] Mapping surah metadata...")
-        val surahMaps = remoteSurahs.map { s ->
-            mapOf(
-                "number" to s.nomor,
-                "name" to s.nama,
-                "english_name" to s.namaLatin,
-                "english_name_translation" to s.arti,
-                "number_of_ayahs" to s.jumlahAyat,
-                "revelation_type" to if (s.tempatTurun.equals("Mekah", ignoreCase = true)) "Meccan" else "Medinan"
-            )
-        }
-        dbManager.insertSurahs(surahMaps)
+        println("[PROCESS] Starting data generation pipeline...")
 
-        // 4. Batch Process Ayahs with Progress
-        println("[PROCESS] Starting data download and mapping:")
-        remoteSurahs.forEachIndexed { index, s ->
-            val surahNum = index + 1
-            val eta = TimeUtil.calculateEta(startTime, index, remoteSurahs.size)
-            val progress = (surahNum.toDouble() / remoteSurahs.size * 100).toInt()
-            
-            print("\r[%3d%%] [%d/114] Downloading: %-20s | ETA: %s".format(
-                progress, surahNum, s.namaLatin, TimeUtil.formatDuration(eta)
-            ))
-
-            val detail = fetcher.fetchSurahDetail(s.nomor)
-            val ayahMaps = detail.ayat.map { a ->
-                mapOf(
-                    "surah_number" to s.nomor,
-                    "number" to a.nomorAyat,
-                    "text_arabic" to a.teksArab,
-                    "text_arabic_plain" to ArabicNormalizer.normalize(a.teksArab),
-                    "text_latin" to a.teksLatin,
-                    "text_indonesia" to a.teksIndonesia
-                )
+        val result = generateUseCase(
+            params = GenerateQuranDatabaseUseCase.Params(
+                dbVersion = config.dbVersion.toString(),
+                apiSource = config.baseUrl
+            ),
+            onProgress = { index, total, surahNum, surahName ->
+                val eta = TimeUtil.calculateEta(startTime, index, total)
+                val progress = (surahNum.toDouble() / total * 100).toInt()
+                print("\r[%3d%%] [%d/%d] Downloading: %-20s | ETA: %s".format(
+                    progress, surahNum, total, surahName, TimeUtil.formatDuration(eta)
+                ))
             }
-            dbManager.insertAyahs(ayahMaps)
-            totalAyahInserted += ayahMaps.size
-        }
-        
-        // 5. Save Metadata
-        val metadataMaps = mapOf(
-            "version" to config.dbVersion.toString(),
-            "generated_at" to OffsetDateTime.now().toString(),
-            "api_source" to config.baseUrl,
-            "source_license" to "CC BY-SA 4.0",
-            "locale" to "id-ID",
-            "generated_by" to "Hi-Quran Generator"
         )
-        dbManager.saveMetadata(metadataMaps)
 
         dbManager.commitTransaction()
         println("\n[SUCCESS] All data committed to database.")
 
+        // 6. Final Validation & Optimization
+        println("[PROCESS] Running final validation...")
+        val isValid = dbManager.validate()
+        val checksum = dbManager.calculateContentChecksum()
+
+        if (!isValid) {
+            dbManager.deleteDatabaseFile()
+            throw Exception("Database validation failed. Output deleted.")
+        }
+
+        dbManager.optimizeAndClose()
+
+        // 7. Generate Reports
+        reporter.generateAll(
+            ReportData(
+                dbVersion = config.dbVersion,
+                apiSource = config.baseUrl,
+                totalSurah = result.totalSurahs,
+                totalAyah = result.totalAyahs,
+                validationResult = "PASSED",
+                checksum = checksum,
+                finalStatus = "SUCCESS"
+            )
+        )
+
     } catch (e: Exception) {
         dbManager.rollbackTransaction()
         dbManager.deleteDatabaseFile()
-        throw Exception("Pipeline failed during insertion: ${e.message}")
+        throw Exception("Pipeline failed: ${e.message}")
     }
-
-    // 6. Final Validation & Optimization
-    println("[PROCESS] Running final validation...")
-    val isValid = dbManager.validate()
-    val checksum = dbManager.calculateContentChecksum()
-    
-    if (!isValid) {
-        dbManager.deleteDatabaseFile()
-        throw Exception("Database validation failed. Output deleted.")
-    }
-
-    dbManager.optimizeAndClose()
-
-    // 7. Generate Reports
-    reporter.generateAll(
-        ReportData(
-            dbVersion = config.dbVersion,
-            apiSource = config.baseUrl,
-            totalSurah = remoteSurahs.size,
-            totalAyah = totalAyahInserted,
-            validationResult = "PASSED",
-            checksum = checksum,
-            finalStatus = "SUCCESS"
-        )
-    )
 }

@@ -12,9 +12,9 @@ interface BookmarkDao {
     @Delete
     suspend fun deleteBookmark(bookmark: BookmarkEntity)
 
-    @Query("SELECT * FROM bookmark ORDER BY createdAt DESC")
+    @Query("SELECT * FROM bookmark ORDER BY created_at DESC")
     fun getAllBookmarks(): Flow<List<BookmarkEntity>>
 
-    @Query("SELECT EXISTS(SELECT * FROM bookmark WHERE surahNumber = :surahNumber AND ayahNumber = :ayahNumber)")
+    @Query("SELECT EXISTS(SELECT * FROM bookmark WHERE surah_number = :surahNumber AND ayah_number = :ayahNumber)")
     fun isBookmarked(surahNumber: Int, ayahNumber: Int): Flow<Boolean>
 }

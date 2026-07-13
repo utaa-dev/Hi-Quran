@@ -20,6 +20,7 @@ class DatabaseManager(private val config: GeneratorConfig) {
             stmt.execute("PRAGMA foreign_keys = ON;")
             stmt.execute("PRAGMA journal_mode = DELETE;")
             stmt.execute("PRAGMA synchronous = OFF;")
+            stmt.execute("PRAGMA user_version = 2;") // Set version to match HiQuranDatabase
         }
         
         println("[DB] Connected and PRAGMA configured.")
@@ -44,24 +45,30 @@ class DatabaseManager(private val config: GeneratorConfig) {
             // Tabel Surah
             stmt.execute("""
                 CREATE TABLE surah (
-                    number INTEGER PRIMARY KEY CHECK(number BETWEEN 1 AND 114),
+                    number INTEGER PRIMARY KEY NOT NULL,
                     name TEXT NOT NULL,
                     english_name TEXT NOT NULL,
                     english_name_translation TEXT NOT NULL,
-                    number_of_ayahs INTEGER NOT NULL CHECK(number_of_ayahs > 0),
-                    revelation_type TEXT NOT NULL CHECK(revelation_type IN ('Meccan', 'Medinan'))
+                    number_of_ayahs INTEGER NOT NULL,
+                    revelation_type TEXT NOT NULL
                 )
             """.trimIndent())
 
-            // Tabel Ayah (Hapus kolom Juz untuk akurasi v1)
+            // Tabel Ayah (Hapus kolom Juz untuk akurasi v1 -> Dikembalikan untuk kompatibilitas Room)
             stmt.execute("""
                 CREATE TABLE ayah (
                     surah_number INTEGER NOT NULL,
-                    number INTEGER NOT NULL CHECK(number > 0),
+                    number INTEGER NOT NULL,
                     text_arabic TEXT NOT NULL,
                     text_arabic_plain TEXT NOT NULL,
                     text_latin TEXT NOT NULL,
                     text_indonesia TEXT NOT NULL,
+                    juz INTEGER NOT NULL DEFAULT 0,
+                    manzil INTEGER NOT NULL DEFAULT 0,
+                    page INTEGER NOT NULL DEFAULT 0,
+                    ruku INTEGER NOT NULL DEFAULT 0,
+                    hizb_quarter INTEGER NOT NULL DEFAULT 0,
+                    sajda INTEGER NOT NULL DEFAULT 0,
                     PRIMARY KEY (surah_number, number),
                     FOREIGN KEY (surah_number) REFERENCES surah(number) ON DELETE CASCADE
                 )
@@ -70,15 +77,60 @@ class DatabaseManager(private val config: GeneratorConfig) {
             // Metadata
             stmt.execute("""
                 CREATE TABLE database_metadata (
-                    key TEXT PRIMARY KEY,
+                    key TEXT PRIMARY KEY NOT NULL,
                     value TEXT NOT NULL
                 )
             """.trimIndent())
 
             // Index
             stmt.execute("CREATE INDEX idx_ayah_surah_number ON ayah(surah_number)")
+
+            // --- Kompatibilitas Room Android ---
+            
+            // Tabel Doa (Static)
+            stmt.execute("""
+                CREATE TABLE doa (
+                    id INTEGER PRIMARY KEY NOT NULL,
+                    title TEXT NOT NULL,
+                    arabic TEXT NOT NULL,
+                    translation TEXT NOT NULL,
+                    source TEXT NOT NULL
+                )
+            """.trimIndent())
+
+            // Tabel Juz (Static)
+            stmt.execute("""
+                CREATE TABLE juz (
+                    number INTEGER PRIMARY KEY NOT NULL,
+                    name TEXT NOT NULL,
+                    start_surah_number INTEGER NOT NULL,
+                    start_ayah_number INTEGER NOT NULL
+                )
+            """.trimIndent())
+
+            // Tabel Bookmark (User Data)
+            stmt.execute("""
+                CREATE TABLE bookmark (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    surah_number INTEGER NOT NULL,
+                    ayah_number INTEGER NOT NULL,
+                    surah_name TEXT NOT NULL,
+                    created_at INTEGER NOT NULL
+                )
+            """.trimIndent())
+
+            // Tabel Last Read (User Data)
+            stmt.execute("""
+                CREATE TABLE last_read (
+                    id INTEGER PRIMARY KEY NOT NULL,
+                    surah_number INTEGER NOT NULL,
+                    ayah_number INTEGER NOT NULL,
+                    surah_name TEXT NOT NULL,
+                    timestamp INTEGER NOT NULL
+                )
+            """.trimIndent())
         }
-        println("[DB] Schema created (Juz column removed for v1 accuracy).")
+        println("[DB] Schema created with Android compatibility tables.")
     }
 
     fun insertSurahs(surahs: List<Map<String, Any?>>) {
@@ -103,8 +155,11 @@ class DatabaseManager(private val config: GeneratorConfig) {
 
     fun insertAyahs(ayahs: List<Map<String, Any?>>) {
         val sql = """
-            INSERT INTO ayah (surah_number, number, text_arabic, text_arabic_plain, text_latin, text_indonesia)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO ayah (
+                surah_number, number, text_arabic, text_arabic_plain, text_latin, text_indonesia,
+                juz, manzil, page, ruku, hizb_quarter, sajda
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """.trimIndent()
 
         connection?.prepareStatement(sql)?.use { pstmt ->
@@ -115,6 +170,12 @@ class DatabaseManager(private val config: GeneratorConfig) {
                 pstmt.setString(4, ayah["text_arabic_plain"] as String)
                 pstmt.setString(5, ayah["text_latin"] as String)
                 pstmt.setString(6, ayah["text_indonesia"] as String)
+                pstmt.setInt(7, ayah["juz"] as Int)
+                pstmt.setInt(8, ayah["manzil"] as Int)
+                pstmt.setInt(9, ayah["page"] as Int)
+                pstmt.setInt(10, ayah["ruku"] as Int)
+                pstmt.setInt(11, ayah["hizb_quarter"] as Int)
+                pstmt.setInt(12, ayah["sajda"] as Int)
                 pstmt.addBatch()
             }
             pstmt.executeBatch()
@@ -176,6 +237,16 @@ class DatabaseManager(private val config: GeneratorConfig) {
             if (orphanAyahs > 0) {
                 println("[VALIDATION ERROR] Found $orphanAyahs orphan ayahs.")
                 return false
+            }
+
+            // 4. Cek Existence Tabel Kompatibilitas
+            val compatibilityTables = listOf("doa", "juz", "bookmark", "last_read")
+            for (table in compatibilityTables) {
+                val exists = stmt.executeQuery("SELECT name FROM sqlite_master WHERE type='table' AND name='$table'").next()
+                if (!exists) {
+                    println("[VALIDATION ERROR] Compatibility table '$table' is missing.")
+                    return false
+                }
             }
         }
         return true

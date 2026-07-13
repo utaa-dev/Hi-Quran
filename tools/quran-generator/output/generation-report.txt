@@ -5,7 +5,7 @@ Generator Version : 1.0.0
 Database Version  : 1
 Schema Version    : 1
 Source API        : https://equran.id/api/v2/
-Generated At      : 2026-07-09T13:33:04.731755100+07:00
+Generated At      : 2026-07-13T13:47:56.413487600+07:00
 --------------------------------------------------
 Total Surah       : 114
 Total Ayah        : 6236

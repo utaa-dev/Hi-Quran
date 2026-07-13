@@ -28,7 +28,7 @@ interface QuranDao {
     @Query("SELECT * FROM surah WHERE number = :surahNumber")
     suspend fun getSurahByNumber(surahNumber: Int): SurahEntity?
 
-    @Query("SELECT * FROM ayah WHERE surahNumber = :surahNumber ORDER BY number ASC")
+    @Query("SELECT * FROM ayah WHERE surah_number = :surahNumber ORDER BY number ASC")
     fun getAyahsBySurah(surahNumber: Int): Flow<List<AyahEntity>>
 
     @Query("SELECT COUNT(*) FROM surah")

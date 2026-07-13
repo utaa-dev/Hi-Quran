@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.room.Room
 import com.example.hi_quran.data.local.dao.*
 import com.example.hi_quran.data.local.database.HiQuranDatabase
-import com.example.hi_quran.data.local.datasource.QuranLocalDataSource
 import com.example.hi_quran.data.repository.QuranRepositoryImpl
 import com.example.hi_quran.domain.repository.QuranRepository
 import com.example.hi_quran.domain.usecase.bookmark.AddBookmarkUseCase
@@ -16,7 +15,6 @@ import com.example.hi_quran.domain.usecase.lastread.UpdateLastReadUseCase
 import com.example.hi_quran.domain.usecase.quran.GetAyahsBySurahUseCase
 import com.example.hi_quran.domain.usecase.quran.GetSurahByNumberUseCase
 import com.example.hi_quran.domain.usecase.quran.GetSurahsUseCase
-import com.example.hi_quran.domain.usecase.quran.ImportQuranUseCase
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -35,7 +33,9 @@ object DatabaseModule {
             context,
             HiQuranDatabase::class.java,
             HiQuranDatabase.DATABASE_NAME
-        ).build()
+        ).createFromAsset("database/quran.db")
+            .fallbackToDestructiveMigration()
+            .build()
     }
 
     @Provides
@@ -65,25 +65,9 @@ object DatabaseModule {
         juzDao: JuzDao,
         bookmarkDao: BookmarkDao,
         lastReadDao: LastReadDao,
-        doaDao: DoaDao,
-        quranApi: com.example.hi_quran.data.remote.api.QuranApi
+        doaDao: DoaDao
     ): QuranRepository {
-        return QuranRepositoryImpl(quranDao, juzDao, bookmarkDao, lastReadDao, doaDao, quranApi)
-    }
-
-    @Provides
-    @Singleton
-    fun provideQuranLocalDataSource(@ApplicationContext context: Context): QuranLocalDataSource {
-        return QuranLocalDataSource(context)
-    }
-
-    @Provides
-    @Singleton
-    fun provideImportQuranUseCase(
-        repository: QuranRepository,
-        localDataSource: QuranLocalDataSource
-    ): ImportQuranUseCase {
-        return ImportQuranUseCase(repository, localDataSource)
+        return QuranRepositoryImpl(quranDao, juzDao, bookmarkDao, lastReadDao, doaDao)
     }
 
     @Provides

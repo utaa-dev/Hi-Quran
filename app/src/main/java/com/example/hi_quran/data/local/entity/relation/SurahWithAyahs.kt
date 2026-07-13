@@ -9,7 +9,7 @@ data class SurahWithAyahs(
     @Embedded val surah: SurahEntity,
     @Relation(
         parentColumn = "number",
-        entityColumn = "surahNumber"
+        entityColumn = "surah_number"
     )
     val ayahs: List<AyahEntity>
 )
